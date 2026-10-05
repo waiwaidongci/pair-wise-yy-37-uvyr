@@ -10,6 +10,12 @@ class ValidationError(DomainError): kind=ErrorKind.VALIDATION
 class NotFoundError(DomainError): kind=ErrorKind.NOT_FOUND
 class PermissionDenied(DomainError): kind=ErrorKind.FORBIDDEN
 class ConflictError(DomainError): kind=ErrorKind.CONFLICT
+class LedgerGapError(ConflictError):
+    """因果链缺号或因果序号无法解析，停在最后确认事件并保留原结果。"""
+class LedgerTamperError(ConflictError):
+    """已确认事件被改动（内容或哈希不符），拒绝继续写入。"""
+class LedgerForkError(ConflictError):
+    """新版本不是当前确认结果的后继，晚到提交不得覆盖已确认结果。"""
 SEVERITIES=['low', 'medium', 'high', 'critical']; STATES=['draft', 'submitted', 'inspection', 'correction', 'approved']; ROLES=['applicant', 'inspector', 'compliance_manager', 'viewer']
 @dataclass(frozen=True)
 class Item:

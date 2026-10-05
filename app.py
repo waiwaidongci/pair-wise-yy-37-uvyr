@@ -13,6 +13,8 @@ def parse_args():
     return parser.parse_args()
 def main():
     args=parse_args(); repository=Repository(args.db); service=Service(repository)
+    upgraded=repository.upgrade_legacy_baseline()
+    if upgraded: print(f"upgraded legacy baselines for items: {upgraded}")
     server=ThreadingHTTPServer((args.host,args.port),make_handler(service,str(Path(__file__).resolve().parent/"static")))
     print(f"listening on http://{args.host}:{args.port}")
     try: server.serve_forever()

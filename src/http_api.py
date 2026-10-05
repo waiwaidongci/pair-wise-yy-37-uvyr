@@ -89,6 +89,14 @@ def make_handler(service: Service, static_dir: str):
                     actor, role = self._identity()
                     del actor
                     self._json(200, {"records": service.list_records(item_id, role)})
+                elif path.startswith("/api/items/") and path.endswith("/ledger/verify"):
+                    item_id = int(path.split("/")[3])
+                    actor, role = self._identity()
+                    self._json(200, service.verify_ledger(item_id, role))
+                elif path.startswith("/api/items/") and path.endswith("/ledger"):
+                    item_id = int(path.split("/")[3])
+                    actor, role = self._identity()
+                    self._json(200, service.ledger_state(item_id, role))
                 elif path.startswith("/api/items/"):
                     item_id = int(path.rsplit("/", 1)[-1])
                     actor, role = self._identity()
@@ -98,6 +106,10 @@ def make_handler(service: Service, static_dir: str):
                     actor, role = self._identity()
                     del actor
                     self._json(200, {"events": service.audit(role)})
+                elif path == "/api/ledger/upgrade":
+                    actor, role = self._identity()
+                    del actor
+                    self._json(200, service.upgrade_legacy(role))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:
@@ -119,6 +131,18 @@ def make_handler(service: Service, static_dir: str):
                     expected = body.get("expected_version")
                     self._json(200, service.transition(
                         item_id, target, expected, actor, role))
+                elif path.startswith("/api/items/") and path.endswith("/changes"):
+                    item_id = int(path.split("/")[3])
+                    event_type = body.get("type")
+                    self._json(201, service.submit_change(
+                        item_id, event_type, body, actor, role))
+                elif path.startswith("/api/items/") and path.endswith("/backfill"):
+                    item_id = int(path.split("/")[3])
+                    self._json(200, service.backfill_changes(
+                        item_id, body, actor, role))
+                elif path.startswith("/api/items/") and path.endswith("/recover"):
+                    item_id = int(path.split("/")[3])
+                    self._json(200, service.recover(item_id, actor, role))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:
