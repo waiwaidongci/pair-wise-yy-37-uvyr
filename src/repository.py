@@ -63,9 +63,20 @@ class Repository:
                     detail TEXT NOT NULL,
                     previous_hash TEXT NOT NULL,
                     entry_hash TEXT NOT NULL UNIQUE,
-                    created_at TEXT NOT NULL
+                    created_at TEXT NOT NULL,
+                    ledger_event_hash TEXT
                 );
             """)
+            self._migrate_audit_ledger_hash()
+
+    def _migrate_audit_ledger_hash(self) -> None:
+        """为旧库补 ledger_event_hash 列（幂等迁移）。"""
+        cols = [r[1] for r in self.conn.execute("PRAGMA table_info(audit_events)").fetchall()]
+        if "ledger_event_hash" not in cols:
+            self.conn.execute("ALTER TABLE audit_events ADD COLUMN ledger_event_hash TEXT")
+        self.conn.execute(
+            """CREATE UNIQUE INDEX IF NOT EXISTS ux_audit_ledger_hash
+               ON audit_events(ledger_event_hash) WHERE ledger_event_hash IS NOT NULL""")
 
     @staticmethod
     def _item(row: sqlite3.Row) -> Dict[str, Any]:

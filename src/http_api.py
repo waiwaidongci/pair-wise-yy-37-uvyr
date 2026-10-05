@@ -42,6 +42,9 @@ def make_handler(service: Service, static_dir: str):
         def _identity(self) -> Tuple[str, str]:
             return self.headers.get("X-Actor", ""), self.headers.get("X-Role", "")
 
+        def _device_id(self, actor: str) -> str:
+            return self.headers.get("X-Device-Id", "") or actor
+
         def _body(self) -> Dict[str, Any]:
             length = int(self.headers.get("Content-Length", "0") or 0)
             if length <= 0:
@@ -107,18 +110,19 @@ def make_handler(service: Service, static_dir: str):
             try:
                 path = urlparse(self.path).path
                 actor, role = self._identity()
+                device_id = self._device_id(actor)
                 body = self._body()
                 if path == "/api/items":
-                    self._json(201, service.create_item(body, actor, role))
+                    self._json(201, service.create_item(body, actor, role, device_id))
                 elif path.startswith("/api/items/") and path.endswith("/records"):
                     item_id = int(path.split("/")[3])
-                    self._json(201, service.add_record(item_id, body, actor, role))
+                    self._json(201, service.add_record(item_id, body, actor, role, device_id))
                 elif path.startswith("/api/items/") and path.endswith("/transition"):
                     item_id = int(path.split("/")[3])
                     target = body.get("target")
                     expected = body.get("expected_version")
                     self._json(200, service.transition(
-                        item_id, target, expected, actor, role))
+                        item_id, target, expected, actor, role, device_id))
                 else:
                     self._json(404, {"error": "not_found"})
             except Exception as exc:
